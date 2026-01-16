@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mighty Party - Turf War Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        header p {
+            font-size: 1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .time-info {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            font-size: 0.95em;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .time-info div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .time-info .label {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .time-info .value {
+            font-weight: 600;
+            font-size: 1.3em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            color: #2c3e50;
+            padding: 25px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+
+        .stat-card h3 {
+            font-size: 0.85em;
+            opacity: 0.7;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+
+        .stat-card .subtitle {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 20px;
+            font-size: 0.95em;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-bar input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .guild-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .guild-bullet {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .guild-bullet.enemy {
+            background-color: #e74c3c;
+        }
+
+        .guild-bullet.neutral {
+            background-color: #bdc3c7;
+        }
+
+        .guild-bullet.ally {
+            background-color: #27ae60;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+
+        table thead {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        table th:hover {
+            background: #ecf0f1;
+        }
+
+        table th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.3;
+            font-size: 0.8em;
+        }
+
+        table th.sort-asc::after {
+            content: ' ↑';
+            opacity: 0.7;
+            color: #3498db;
+        }
+
+        table th.sort-desc::after {
+            content: ' ↓';
+            opacity: 0.7;
+            color: #3498db;
+        }
+
+        table td {
+            padding: 15px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        table tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .update-time {
+            font-size: 0.75em;
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        .positive {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .negative {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .neutral {
+            color: #95a5a6;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.master {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.officer {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .badge.member {
+            background: #bdc3c7;
+            color: #2c3e50;
+        }
+
+        .badge.sniper {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge.round-1 {
+            background: #3498db;
+            color: white;
+        }
+
+        .badge.round-2 {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.round-3 {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.1em;
+            color: #7f8c8d;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error {
+            background: #fee;
+            color: #c0392b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .back-button {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .back-button:hover {
+            background: #bdc3c7;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .pattern-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .pattern-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+
+        .pattern-card .label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .pattern-card .count {
+            font-size: 2em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            font-weight: 600;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            font-weight: 600;
+        }
+
+        .filter-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .filter-bar select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            margin-right: 10px;
+            background: white;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+            font-size: 1.05em;
+        }
+    
+
+        .trigger-crons-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .trigger-crons-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .trigger-crons-btn:active {
+            transform: translateY(0);
+        }
+
+        .trigger-crons-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .progress-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .progress-content h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .progress-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .progress-item.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-item.pending {
+            background: #e7f3ff;
+            color: #004085;
+        }
+
+        .close-modal-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            font-weight: 600;
+        }
+
+        .close-modal-btn:hover {
+            background: #5568d3;
+        }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>⚔️ Mighty Party - Turf War Tracker</h1>
+<p>Strategic Intelligence Dashboard</p>
+<div class="time-info">
+<div>
+<div class="label">Current Time (UTC+5)</div>
+<div class="value" id="current-time">--:--:--</div>
+</div>
+<div>
+<div class="label">Current Round</div>
+<div class="value" id="current-round">R-</div>
+</div>
+</div>
+
+<button class="trigger-crons-btn" id="triggerCronsBtn">
+<span id="btnText">⚡ Force Run Crons</span>
+<span class="loader" id="btnLoader" style="display:none;"></span>
+</button></header>
+<div class="content">
+<!-- COMPARISON VIEW (DEFAULT) -->
+<div class="view active" id="comparison-view">
+<h2>Today's Performance vs Average</h2>
+<div class="search-bar">
+<input id="comparison-search" oninput="filterComparison()" placeholder="🔍 Search guilds..." type="text"/>
+</div>
+<div class="loading" id="comparison-loading">Loading comparison data</div>
+<div class="error" id="comparison-error" style="display: none;"></div>
+<div id="comparison-content"></div>
+</div>
+<!-- GUILD DETAIL VIEW -->
+<div class="view" id="guild-detail-view">
+<button class="back-button" onclick="navigateTo('comparison')">← Back to Performance</button>
+<div class="loading" id="guild-detail-loading">Loading guild details</div>
+<div class="error" id="guild-detail-error" style="display: none;"></div>
+<div id="guild-detail-content"></div>
+</div>
+<!-- PLAYER DETAIL VIEW -->
+<div class="view" id="player-detail-view">
+<button class="back-button" onclick="backToGuild()">← Back to Guild</button>
+<div class="loading" id="player-detail-loading">Loading player details</div>
+<div class="error" id="player-detail-error" style="display: none;"></div>
+<div id="player-detail-content"></div>
+</div>
+</div>
+</div>
+<script>
+        const API_BASE = 'http://localhost:3000/api';
+        let currentGuildId = null;
+        let comparisonData = [];
+        let currentGuildMembers = [];
+
+        // URL routing
+        function getHashParams() {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return { view: 'comparison' };
+            
+            const parts = hash.split('/');
+            const result = { view: parts[0] };
+            
+            if (parts[1]) result.id = parts[1];
+            
+            return result;
+        }
+
+        function setHash(view, id = null) {
+            if (id) {
+                window.location.hash = `${view}/${id}`;
+            } else {
+                window.location.hash = view;
+            }
+        }
+
+        function navigateTo(view, id = null) {
+            setHash(view, id);
+            handleRoute();
+        }
+
+        function handleRoute() {
+            const params = getHashParams();
+            
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            
+            if (params.view === 'comparison') {
+                document.getElementById('comparison-view').classList.add('active');
+                loadComparison();
+            } else if (params.view === 'guild' && params.id) {
+                document.getElementById('guild-detail-view').classList.add('active');
+                showGuildDetail(params.id);
+            } else if (params.view === 'player' && params.id) {
+                document.getElementById('player-detail-view').classList.add('active');
+                showPlayerDetail(params.id);
+            } else {
+                // Default to comparison
+                navigateTo('comparison');
+            }
+        }
+
+        // Listen for hash changes (back/forward buttons)
+        window.addEventListener('hashchange', handleRoute);
+
+        function backToGuild() {
+            if (currentGuildId) {
+                navigateTo('guild', currentGuildId);
+            } else {
+                navigateTo('comparison');
+            }
+        }
+
+        // Update time and round
+        function updateTimeAndRound() {
+            const now = new Date();
+            const utc5Time = new Date(now.getTime() + (5 * 60 * 60 * 1000));
+            
+            const hours = utc5Time.getUTCHours();
+            const minutes = utc5Time.getUTCMinutes();
+            const seconds = utc5Time.getUTCSeconds();
+            
+            document.getElementById('current-time').textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            let roundNumber;
+            if (hours >= 0 && hours < 6) {
+                roundNumber = 1;
+            } else if (hours >= 6 && hours < 18) {
+                roundNumber = 2;
+            } else {
+                roundNumber = 3;
+            }
+            
+            document.getElementById('current-round').textContent = `R${roundNumber}`;
+        }
+
+        setInterval(updateTimeAndRound, 1000);
+        updateTimeAndRound();
+
+        // Format numbers
+        function formatNumber(num) {
+            if (!num) return '0';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function formatPercentage(num) {
+            if (!num || isNaN(num)) return '0%';
+            const sign = num >= 0 ? '+' : '';
+            return `${sign}${parseFloat(num).toFixed(1)}%`;
+        }
+
+        function getPercentageClass(num) {
+            if (!num || isNaN(num)) return 'neutral';
+            return parseFloat(num) >= 0 ? 'positive' : 'negative';
+        }
+
+        // Sorting functionality
+        let currentSort = { column: null, direction: 'asc', dataArray: null };
+
+        function sortTable(column, dataArray, renderFunction) {
+            if (currentSort.column === column && currentSort.dataArray === dataArray) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+                currentSort.dataArray = dataArray;
+            }
+
+            dataArray.sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+
+                if (aVal == null) aVal = 0;
+                if (bVal == null) bVal = 0;
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                    if (currentSort.direction === 'asc') {
+                        return aVal.localeCompare(bVal);
+                    } else {
+                        return bVal.localeCompare(aVal);
+                    }
+                }
+            });
+
+            renderFunction();
+            updateSortIndicators(column);
+        }
+
+        function updateSortIndicators(column) {
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.column === column) {
+                    th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        // Filter comparison
+        function filterComparison() {
+            const searchTerm = document.getElementById('comparison-search').value.toLowerCase();
+            const filteredData = comparisonData.filter(item => 
+                item.guild_name.toLowerCase().includes(searchTerm)
+            );
+            renderComparisonTable(filteredData);
+        }
+
+        // Filter members
+        function filterMembers() {
+            const searchTerm = document.getElementById('member-search').value.toLowerCase();
+            const filteredData = currentGuildMembers.filter(member => 
+                member.name.toLowerCase().includes(searchTerm)
+            );
+            renderMembersTable(filteredData);
+        }
+
+        // Load Comparison
+        async function loadComparison() {
+            const loading = document.getElementById('comparison-loading');
+            const error = document.getElementById('comparison-error');
+            const content = document.getElementById('comparison-content');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/today-comparison`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                loading.style.display = 'none';
+                
+                if (data.comparison.length === 0) {
+                    content.innerHTML = '<div class="no-data">No comparison data available yet.</div>';
+                    return;
+                }
+                
+                comparisonData = data.comparison;
+                renderComparisonTable(comparisonData);
+                
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Error: ${err.message}`;
+            }
+        }
+
+        function renderComparisonTable(data) {
+            if (!data) data = comparisonData;
+            
+            if (!data || !Array.isArray(data)) {
+                console.error('Invalid data passed to renderComparisonTable:', data);
+                return;
+            }
+            
+            const content = document.getElementById('comparison-content');
+            if (!content) return;
+            
+            let html = '<table><thead><tr>';
+            html += '<th class="sortable" data-column="guild_name" onclick="sortTable(\'guild_name\', comparisonData, renderComparisonTable)">Guild</th>';
+            html += '<th class="sortable" data-column="guild_might" onclick="sortTable(\'guild_might\', comparisonData, renderComparisonTable)">Guild Might</th>';
+            html += '<th class="sortable" data-column="members_placed" onclick="sortTable(\'members_placed\', comparisonData, renderComparisonTable)">Members Placed</th>';
+            html += '<th class="sortable" data-column="today_deployed_power" onclick="sortTable(\'today_deployed_power\', comparisonData, renderComparisonTable)">Deployed Power</th>';
+            html += '<th class="sortable" data-column="max_deployed_ever" onclick="sortTable(\'max_deployed_ever\', comparisonData, renderComparisonTable)">Max Ever</th>';
+            html += '<th class="sortable" data-column="avg_deployed_hard" onclick="sortTable(\'avg_deployed_hard\', comparisonData, renderComparisonTable)">Avg Hard</th>';
+            html += '<th class="sortable" data-column="avg_deployed_weak" onclick="sortTable(\'avg_deployed_weak\', comparisonData, renderComparisonTable)">Avg Weak</th>';
+            html += '<th class="sortable" data-column="today_elixir" onclick="sortTable(\'today_elixir\', comparisonData, renderComparisonTable)">Elixir</th>';
+            html += '<th>Last Update</th></tr></thead><tbody>';
+            
+            data.forEach(item => {
+                const membersPlaced = item.members_placed || 0;
+                const totalMembers = item.total_members || 0;
+                const placementPercentage = totalMembers > 0 ? Math.round((membersPlaced / totalMembers) * 100) : 0;
+                const teamClass = item.team || 'neutral';
+                
+                html += `<tr onclick="navigateTo('guild', ${item.guild_id})">`;
+                html += `<td>
+                    <div class="guild-label">
+                        <span class="guild-bullet ${teamClass}"></span>
+                        <strong>${item.guild_name}</strong>
+                    </div>
+                </td>`;
+                html += `<td>${formatNumber(item.guild_might || 0)}</td>`;
+                html += `<td><strong>${membersPlaced}/${totalMembers}</strong> <span style="color: #7f8c8d; font-size: 0.85em;">(${placementPercentage}%)</span></td>`;
+                html += `<td><strong>${formatNumber(item.today_deployed_power || 0)}</strong></td>`;
+                html += `<td><strong style="color: #e74c3c;">${formatNumber(Math.round(item.max_deployed_ever || 0))}</strong></td>`;
+                html += `<td><strong style="color: #f39c12;">${formatNumber(Math.round(item.avg_deployed_hard || 0))}</strong></td>`;
+                html += `<td style="color: #95a5a6;">${formatNumber(Math.round(item.avg_deployed_weak || 0))}</td>`;
+                html += `<td>${formatNumber(item.today_elixir || 0)}</td>`;
+                html += `<td><span class="update-time">${item.last_update ? new Date(item.last_update).toLocaleString() : 'N/A'}</span></td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        }
+
+        async function showGuildDetail(guildId) {
+            currentGuildId = guildId;
+            const loading = document.getElementById('guild-detail-loading');
+            const error = document.getElementById('guild-detail-error');
+            const content = document.getElementById('guild-detail-content');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/guild/${guildId}`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                loading.style.display = 'none';
+                
+                const guild = data.guild;
+                currentGuildMembers = data.members;
+                
+                let html = `<h2>${guild.name} - Detailed Analysis</h2>`;
+                
+                // Stats cards
+                html += `<div class="stats-grid">`;
+                html += `<div class="stat-card">
+                    <h3>Members Placed</h3>
+                    <div class="value">${guild.members_placed}/${guild.members_count}</div>
+                </div>`;
+                html += `<div class="stat-card">
+                    <h3>Total Power</h3>
+                    <div class="value">${formatNumber(guild.summary_power)}</div>
+                </div>`;
+                html += `<div class="stat-card">
+                    <h3>Max Placed Ever</h3>
+                    <div class="value">${formatNumber(guild.max_placed_ever)}</div>
+                    <div class="subtitle">Best day at 23:59</div>
+                </div>`;
+                html += `<div class="stat-card">
+                    <h3>Potential Left <span style="cursor: help; font-size: 0.8em; opacity: 0.6;" title="Calculated as: Max Placed Ever - Today's Current Power">ℹ️</span></h3>
+                    <div class="value" style="color: ${guild.potential_left > 0 ? '#27ae60' : '#95a5a6'}">${formatNumber(guild.potential_left)}</div>
+                    <div class="subtitle">Still available today</div>
+                </div>`;
+                html += `</div>`;
+                
+                // Weekday performance
+                if (data.weekday_stats.length > 0) {
+                    html += `<h3>📅 Performance by Weekday (Last 30 Days)</h3>`;
+                    html += `<table><thead><tr><th>Day</th><th>Avg Power</th><th>Avg Elixir</th><th>Days Played</th></tr></thead><tbody>`;
+                    data.weekday_stats.forEach(stat => {
+                        html += `<tr>`;
+                        html += `<td><strong>${stat.weekday_name}</strong></td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_power))}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_elixir))}</td>`;
+                        html += `<td>${stat.days_count}</td>`;
+                        html += `</tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+                
+                // Round performance
+                if (data.round_stats.length > 0) {
+                    html += `<h3>⚔️ Performance by Round (Last 30 Days)</h3>`;
+                    html += `<table><thead><tr><th>Round</th><th>Snipe Time</th><th>Avg Power</th><th>Avg Elixir</th><th>Samples</th></tr></thead><tbody>`;
+                    data.round_stats.forEach(stat => {
+                        const roundBadge = `<span class="badge round-${stat.round_number}">R${stat.round_number}</span>`;
+                        const snipeBadge = stat.is_snipe_time ? `<span class="badge sniper">SNIPE</span>` : 'Regular';
+                        html += `<tr>`;
+                        html += `<td>${roundBadge}</td>`;
+                        html += `<td>${snipeBadge}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_power))}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_elixir))}</td>`;
+                        html += `<td>${stat.sample_count}</td>`;
+                        html += `</tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+                
+                // Add hourly deployment chart
+                html += `<h3>📊 Hourly Deployment Pattern</h3>`;
+                html += `<div class="chart-container">`;
+                html += `<canvas id="hourlyChart" style="height: 600px;"></canvas>`;
+                html += `</div>`;
+                
+                // Members list
+                html += `<h3>👥 Guild Members</h3>`;
+                html += `<div class="search-bar">`;
+                html += `<input type="text" id="member-search" placeholder="Search members by name..." oninput="filterMembers()">`;
+                html += `</div>`;
+                html += `<div id="members-table-container"></div>`;
+                
+                content.innerHTML = html;
+                renderMembersTable(currentGuildMembers);
+                
+                // Load hourly deployment chart
+                loadHourlyChart(guildId);
+                
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Error: ${err.message}`;
+            }
+        }
+
+
+        function renderMembersTable(data) {
+            if (!data) data = currentGuildMembers;
+            
+            if (!data || !Array.isArray(data)) {
+                console.error('Invalid data passed to renderMembersTable:', data);
+                return;
+            }
+            
+            const container = document.getElementById('members-table-container');
+            if (!container) return;
+            
+            let html = '<table><thead><tr>';
+            html += '<th class="sortable" data-column="name" onclick="sortMembersTable(\'name\')">Name</th>';
+            html += '<th class="sortable" data-column="role" onclick="sortMembersTable(\'role\')">Role</th>';
+            html += '<th class="sortable" data-column="guild_might" onclick="sortMembersTable(\'guild_might\')">Guild Might</th>';
+            html += '<th class="sortable" data-column="today_power" onclick="sortMembersTable(\'today_power\')">Today Power</th>';
+            html += '<th class="sortable" data-column="avg_power_30days" onclick="sortMembersTable(\'avg_power_30days\')">Avg Power (30d)</th>';
+            html += '<th class="sortable" data-column="power_vs_average" onclick="sortMembersTable(\'power_vs_average\')">vs Average</th>';
+            html += '<th class="sortable" data-column="today_elixir" onclick="sortMembersTable(\'today_elixir\')">Today Elixir</th>';
+            html += '<th class="sortable" data-column="avg_elixir_30days" onclick="sortMembersTable(\'avg_elixir_30days\')">Avg Elixir (30d)</th>';
+            html += '<th class="sortable" data-column="elixir_vs_average" onclick="sortMembersTable(\'elixir_vs_average\')">vs Average</th>';
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(member => {
+                const roleBadge = `<span class="badge ${member.role}">${member.role.toUpperCase()}</span>`;
+                html += `<tr onclick="navigateTo('player', '${member.profile_id}')">`;
+                html += `<td><strong>${member.name}</strong> ${member.country ? '🌍 ' + member.country : ''}</td>`;
+                html += `<td>${roleBadge}</td>`;
+                html += `<td>${formatNumber(member.guild_might)}</td>`;
+                html += `<td>${formatNumber(member.today_power)}</td>`;
+                html += `<td>${formatNumber(Math.round(member.avg_power_30days))}</td>`;
+                html += `<td class="${getPercentageClass(member.power_vs_average)}">${formatPercentage(member.power_vs_average)}</td>`;
+                html += `<td>${formatNumber(member.today_elixir)}</td>`;
+                html += `<td>${formatNumber(Math.round(member.avg_elixir_30days))}</td>`;
+                html += `<td class="${getPercentageClass(member.elixir_vs_average)}">${formatPercentage(member.elixir_vs_average)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function sortMembersTable(column) {
+            if (!currentGuildMembers || !Array.isArray(currentGuildMembers)) {
+                console.error('Cannot sort: currentGuildMembers is invalid');
+                return;
+            }
+            
+            if (currentSort.column === column && currentSort.dataArray === currentGuildMembers) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+                currentSort.dataArray = currentGuildMembers;
+            }
+
+            currentGuildMembers.sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+
+                if (aVal == null) aVal = 0;
+                if (bVal == null) bVal = 0;
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                    if (currentSort.direction === 'asc') {
+                        return aVal.localeCompare(bVal);
+                    } else {
+                        return bVal.localeCompare(aVal);
+                    }
+                }
+            });
+
+            renderMembersTable(currentGuildMembers);
+            
+            const container = document.querySelector('#members-table-container');
+            if (container) {
+                container.querySelectorAll('th').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                    if (th.dataset.column === column) {
+                        th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+            }
+        }
+
+        // Show Player Detail
+        async function showPlayerDetail(profileId) {
+            const loading = document.getElementById('player-detail-loading');
+            const error = document.getElementById('player-detail-error');
+            const content = document.getElementById('player-detail-content');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/player/${profileId}`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                loading.style.display = 'none';
+                
+                const player = data.player;
+                const pref = data.round_preference;
+                
+                let html = `<h2>${player.name} - Player Analysis</h2>`;
+                
+                // Player info cards
+                html += '<div class="stats-grid">';
+                html += `<div class="stat-card"><h3>Guild</h3><div class="value" style="font-size: 1.5em;">${player.guild_name}</div></div>`;
+                html += `<div class="stat-card"><h3>Role</h3><div class="value" style="font-size: 1.5em;">${player.role.toUpperCase()}</div></div>`;
+                html += `<div class="stat-card"><h3>Raw Troops</h3><div class="value">${formatNumber(player.guild_might)}</div></div>`;
+                html += `<div class="stat-card"><h3>Deployed Troops Today</h3><div class="value">${formatNumber(player.today_power || 0)}</div></div>`;
+                html += '</div>';
+                
+                // Playing patterns as pie chart
+                html += '<h3>🎮 Playing Patterns (Last 30 Days)</h3>';
+                html += '<div style="max-width: 500px; margin: 0 auto;">';
+                html += '<canvas id="playingPatternChart" style="max-height: 300px;"></canvas>';
+                html += '</div>';
+                
+                // Weekday stats
+                if (data.weekday_stats.length > 0) {
+                    html += '<h3>📅 Performance by Weekday</h3>';
+                    html += '<table><thead><tr><th>Day</th><th>Avg Power</th><th>Avg Elixir</th><th>Days Played</th></tr></thead><tbody>';
+                    data.weekday_stats.forEach(stat => {
+                        html += '<tr>';
+                        html += `<td><strong>${stat.weekday_name}</strong></td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_power))}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_elixir))}</td>`;
+                        html += `<td>${stat.days_played}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+                
+                // Round stats
+                if (data.round_stats.length > 0) {
+                    html += '<h3>⏰ Performance by Round</h3>';
+                    html += '<table><thead><tr><th>Round</th><th>Snipe Time</th><th>Avg Power</th><th>Avg Elixir</th><th>Times Played</th></tr></thead><tbody>';
+                    data.round_stats.forEach(stat => {
+                        const roundBadge = `<span class="badge round-${stat.round_number}">R${stat.round_number}</span>`;
+                        const snipeBadge = stat.is_snipe_time ? '<span class="badge sniper">SNIPE</span>' : '';
+                        html += '<tr>';
+                        html += `<td>${roundBadge}</td>`;
+                        html += `<td>${snipeBadge || 'Regular'}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_power))}</td>`;
+                        html += `<td>${formatNumber(Math.round(stat.avg_elixir))}</td>`;
+                        html += `<td>${stat.times_played}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+                
+                // Recent activity
+                if (data.playing_pattern.length > 0) {
+                    html += '<h3>📜 Recent Activity (Last 30 Days)</h3>';
+                    html += '<div style="overflow-x: auto;">';
+                    html += '<table><thead><tr>';
+                    html += '<th>Date</th>';
+                    html += '<th>R1 Drop</th>';
+                    html += '<th>R1 Snipe</th>';
+                    html += '<th>R2 Drop</th>';
+                    html += '<th>R2 Snipe</th>';
+                    html += '<th>R3 Drop</th>';
+                    html += '<th>R3 Snipe</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    data.playing_pattern.forEach(day => {
+                        html += '<tr>';
+                        html += `<td><strong>${new Date(day.snapshot_date).toLocaleDateString()}</strong></td>`;
+                        
+                        // R1 Drop
+                        if (day.r1_drop > 0) {
+                            html += `<td style="background-color: rgba(44, 62, 80, 0.1);"><strong>${formatNumber(day.r1_drop)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        // R1 Snipe
+                        if (day.r1_snipe > 0) {
+                            html += `<td style="background-color: rgba(93, 173, 226, 0.2);"><strong>${formatNumber(day.r1_snipe)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        // R2 Drop
+                        if (day.r2_drop > 0) {
+                            html += `<td style="background-color: rgba(211, 84, 0, 0.1);"><strong>${formatNumber(day.r2_drop)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        // R2 Snipe
+                        if (day.r2_snipe > 0) {
+                            html += `<td style="background-color: rgba(243, 156, 18, 0.2);"><strong>${formatNumber(day.r2_snipe)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        // R3 Drop
+                        if (day.r3_drop > 0) {
+                            html += `<td style="background-color: rgba(108, 52, 131, 0.1);"><strong>${formatNumber(day.r3_drop)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        // R3 Snipe
+                        if (day.r3_snipe > 0) {
+                            html += `<td style="background-color: rgba(175, 122, 197, 0.2);"><strong>${formatNumber(day.r3_snipe)}</strong></td>`;
+                        } else {
+                            html += '<td style="color: #bdc3c7;">-</td>';
+                        }
+                        
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    html += '</div>';
+                }
+
+                
+                content.innerHTML = html;
+                
+                // Render the playing pattern pie chart
+                renderPlayingPatternChart(data.power_proportions);
+                
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.textContent = `Error: ${err.message}`;
+            }
+        }
+
+
+        async function loadHourlyChart(guildId) {
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/guild/${guildId}/hourly-pattern`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                const ctx = document.getElementById('hourlyChart');
+                if (!ctx) {
+                    console.error('Canvas element not found');
+                    return;
+                }
+                
+                // Destroy existing chart if it exists
+                if (window.hourlyChartInstance) {
+                    window.hourlyChartInstance.destroy();
+                }
+                
+                // Convert data to time labels and values
+                function processDataset(dataArray) {
+                    return dataArray.map(item => ({
+                        time: `${String(item.hour).padStart(2, '0')}:${String(item.minute).padStart(2, '0')}`,
+                        power: parseFloat(item.deployed_power) || 0
+                    }));
+                }
+                
+                const todayProcessed = processDataset(data.today);
+                const avgProcessed = processDataset(data.average_day);
+                const maxProcessed = processDataset(data.max_day);
+                const minProcessed = processDataset(data.min_day);
+                
+                // Get all unique times and sort them
+                const allTimes = new Set([
+                    ...todayProcessed.map(d => d.time),
+                    ...avgProcessed.map(d => d.time),
+                    ...maxProcessed.map(d => d.time),
+                    ...minProcessed.map(d => d.time)
+                ]);
+                const sortedTimes = Array.from(allTimes).sort();
+                
+                // Map data to sorted times
+                function mapToTimes(processed, times) {
+                    const map = new Map(processed.map(d => [d.time, d.power]));
+                    return times.map(time => map.get(time) || null);
+                }
+                
+                const todayData = mapToTimes(todayProcessed, sortedTimes);
+                const avgData = mapToTimes(avgProcessed, sortedTimes);
+                const maxData = mapToTimes(maxProcessed, sortedTimes);
+                const minData = mapToTimes(minProcessed, sortedTimes);
+                
+                // Find indices for round boundaries (06:00, 18:00, 24:00)
+                const roundBoundaries = [
+                    { time: '06:00', label: 'R1 End', color: 'rgba(52, 152, 219, 0.5)' },
+                    { time: '18:00', label: 'R2 End', color: 'rgba(243, 156, 18, 0.5)' },
+                    { time: '24:00', label: 'R3 End', color: 'rgba(155, 89, 182, 0.5)' }
+                ];
+
+                // Create annotation lines
+                const annotations = {};
+                roundBoundaries.forEach((boundary, index) => {
+                    const timeIndex = sortedTimes.indexOf(boundary.time);
+                    if (timeIndex !== -1) {
+                        annotations[`round${index + 1}`] = {
+                            type: 'line',
+                            xMin: timeIndex,
+                            xMax: timeIndex,
+                            borderColor: boundary.color,
+                            borderWidth: 3,
+                            borderDash: [6, 6],
+                            label: {
+                                display: true,
+                                content: boundary.label,
+                                position: 'start',
+                                backgroundColor: boundary.color,
+                                color: '#fff',
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                },
+                                padding: 4
+                            }
+                        };
+                    }
+                });
+
+
+                
+                window.hourlyChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedTimes,
+                        datasets: [
+                            {
+                                label: 'Today',
+                                data: todayData,
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                                borderWidth: 4,
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 4,
+                                pointHoverRadius: 7,
+                                spanGaps: true
+                            },
+                            {
+                                label: 'Average (30d)',
+                                data: avgData,
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                tension: 0.4,
+                                fill: false,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                spanGaps: true
+                            },
+                            {
+                                label: 'Max Day Ever',
+                                data: maxData,
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                borderWidth: 3,
+                                tension: 0.4,
+                                fill: false,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                spanGaps: true
+                            },
+                            {
+                                label: 'Min Day',
+                                data: minData,
+                                borderColor: '#95a5a6',
+                                backgroundColor: 'rgba(149, 165, 166, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                fill: false,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                spanGaps: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Deployed Power Throughout the Day (UTC+5)',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                filter: function(tooltipItem) {
+                                    return tooltipItem.parsed.y !== null;
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) {
+                                            label += formatNumber(Math.round(context.parsed.y));
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: annotations
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (UTC+5)'
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 30,
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Deployed Power'
+                                },
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                        return formatNumber(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading hourly chart', error);
+            }
+        }
+
+
+
+
+
+        function renderPlayingPatternChart(powerProportions) {
+            const ctx = document.getElementById('playingPatternChart');
+            if (!ctx) {
+                console.error('Canvas element not found');
+                return;
+            }
+            
+            console.log('Power proportions received:', powerProportions); // Debug line
+            
+            // Build data arrays
+            const data = [];
+            const labels = [];
+            const colors = [];
+            
+            const colorMap = {
+                1: { drop: '#2c3e50', snipe: '#5dade2' },  // Blue shades
+                2: { drop: '#d35400', snipe: '#f39c12' },  // Orange shades
+                3: { drop: '#6c3483', snipe: '#af7ac5' }   // Purple shades
+            };
+            
+            let total = 0;
+            
+            // Calculate total first
+            powerProportions.forEach(stat => {
+                const dropped = parseFloat(stat.dropped_power) || 0;
+                const sniped = parseFloat(stat.sniped_power) || 0;
+                total += dropped + sniped;
+            });
+            
+            if (total === 0) {
+                ctx.parentElement.innerHTML = '<p style="text-align: center; color: #95a5a6;">No playing pattern data available</p>';
+                return;
+            }
+            
+            // Build chart data
+            powerProportions.forEach(stat => {
+                const round = stat.round_number;
+                const dropped = parseFloat(stat.dropped_power) || 0;
+                const sniped = parseFloat(stat.sniped_power) || 0;
+                
+                if (dropped > 0) {
+                    const percent = ((dropped / total) * 100).toFixed(1);
+                    data.push(dropped);
+                    labels.push(`R${round} Dropped (${percent}%)`);
+                    colors.push(colorMap[round].drop);
+                }
+                
+                if (sniped > 0) {
+                    const percent = ((sniped / total) * 100).toFixed(1);
+                    data.push(sniped);
+                    labels.push(`R${round} Snipe (${percent}%)`);
+                    colors.push(colorMap[round].snipe);
+                }
+            });
+            
+            // Destroy existing chart if it exists
+            if (window.playingPatternChartInstance) {
+                window.playingPatternChartInstance.destroy();
+            }
+            
+            window.playingPatternChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 12
+                                },
+                                padding: 15
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Power Distribution by Round & Type',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed || 0;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${formatNumber(Math.round(value))} power (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+
+
+
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            handleRoute();
+        });
+    
+
+        // Trigger Crons Button Functionality
+        document.getElementById('triggerCronsBtn').addEventListener('click', async function() {
+            const btn = this;
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+
+            // Disable button and show loader
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'block';
+
+            // Create progress modal
+            const modal = document.createElement('div');
+            modal.className = 'progress-modal';
+            modal.innerHTML = `
+                <div class="progress-content">
+                    <h2>🔄 Running Cron Jobs</h2>
+                    <div id="progressList"></div>
+                    <button class="close-modal-btn" onclick="this.parentElement.parentElement.remove()" style="display:none;">Close</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const progressList = document.getElementById('progressList');
+
+            try {
+                const response = await fetch('/api/trigger-crons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Display results
+                    data.results.forEach(result => {
+                        const item = document.createElement('div');
+                        item.className = `progress-item ${result.success ? 'success' : 'error'}`;
+                        item.textContent = result.success 
+                            ? `✓ ${result.guild_name} - Success`
+                            : `✗ ${result.guild_name} - Error: ${result.error}`;
+                        progressList.appendChild(item);
+                    });
+
+                    // Show success message
+                    const summary = document.createElement('div');
+                    summary.style.marginTop = '20px';
+                    summary.style.fontWeight = 'bold';
+                    summary.style.color = '#155724';
+                    summary.textContent = `✅ Completed! ${data.results.filter(r => r.success).length}/${data.results.length} successful`;
+                    progressList.appendChild(summary);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                console.error('Error triggering crons:', error);
+                progressList.innerHTML = `
+                    <div class="progress-item error">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                btnLoader.style.display = 'none';
+
+                // Show close button
+                modal.querySelector('.close-modal-btn').style.display = 'block';
+
+                // Refresh data after a short delay
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        });
+</script>
+</body>
+</html>
